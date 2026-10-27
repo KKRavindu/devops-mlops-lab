@@ -1,0 +1,59 @@
+# Local "production-like" stack:
+#   api        http://localhost:8000/docs   model serving
+#   mlflow     http://localhost:5000        experiment tracking + model registry
+#   prometheus http://localhost:9090        metrics + alert rules
+#   grafana    http://localhost:3000        dashboards (anonymous admin)
+name: mlops-lab
+
+services:
+  api:
+    build:
+      context: .
+      args:
+        MODEL_VERSION: ${MODEL_VERSION:-compose}
+    image: wine-api:latest
+    ports: ["8000:8000"]
+    environment:
+      PREDICTION_LOG: /app/logs/predictions.jsonl
+      LOG_LEVEL: info
+      FAULT_LATENCY_MS: ${FAULT_LATENCY_MS:-0}
+      FAULT_ERROR_RATE: ${FAULT_ERROR_RATE:-0}
+    volumes:
+      - ./logs:/app/logs
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512M }
+    restart: unless-stopped
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.17.0
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+    ports: ["5000:5000"]
+    volumes:
+      - mlflow-data:/mlflow
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports: ["9090:9090"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    depends_on: [api]
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    ports: ["3000:3000"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus]
+
+volumes:
+  mlflow-data:

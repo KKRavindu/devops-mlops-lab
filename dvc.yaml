@@ -1,0 +1,29 @@
+# Reproducible ML pipeline. `dvc repro` re-runs only the stages whose
+# deps, params or code changed. `dvc dag` shows the graph.
+stages:
+  prepare:
+    cmd: python -m src.prepare
+    deps:
+      - src/prepare.py
+      - src/common.py
+    params:
+      - prepare
+    outs:
+      - data/train.csv
+      - data/test.csv
+
+  train:
+    cmd: python -m src.train
+    deps:
+      - src/train.py
+      - src/common.py
+      - data/train.csv
+      - data/test.csv
+    params:
+      - train
+    outs:
+      - models/model.joblib
+      - models/metadata.json
+    metrics:
+      - metrics.json:
+          cache: false

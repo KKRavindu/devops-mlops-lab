@@ -1,0 +1,50 @@
+# Continuous Training: retrain on a schedule or on demand, gate on quality,
+# and publish the model + metrics as a versioned artifact.
+name: ML Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Model type"
+        type: choice
+        options: [random_forest, logistic_regression]
+        default: random_forest
+  schedule:
+    - cron: "0 3 * * 1"   # every Monday 03:00 UTC
+  push:
+    branches: [main]
+    paths: [params.yaml, src/prepare.py, src/train.py]
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    env:
+      TRAIN_MODEL: ${{ inputs.model || 'random_forest' }}
+      MODEL_VERSION: run-${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Prepare data
+        run: python -m src.prepare
+      - name: Train + quality gate
+        run: python -m src.train
+      - name: Publish metrics to job summary
+        run: |
+          {
+            echo "## Model $MODEL_VERSION ($TRAIN_MODEL)"
+            echo '```json'
+            cat metrics.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: model-${{ env.MODEL_VERSION }}
+          path: |
+            models/
+            metrics.json
+          retention-days: 30

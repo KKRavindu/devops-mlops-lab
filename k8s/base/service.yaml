@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wine-api
+  labels: { app: wine-api }
+spec:
+  type: ClusterIP
+  # Selects on `app` only, so both stable and canary pods receive traffic (lab 12).
+  selector: { app: wine-api }
+  ports:
+    - { name: http, port: 80, targetPort: http }

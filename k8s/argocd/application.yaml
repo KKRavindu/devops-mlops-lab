@@ -1,0 +1,22 @@
+# Argo CD watches the Git repo and keeps the cluster in sync with k8s/overlays/prod.
+# Replace repoURL with YOUR fork before applying (lab 13).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wine-api-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_USER/devops-mlops-lab.git
+    targetRevision: main
+    path: k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: wine-prod
+  syncPolicy:
+    automated:
+      prune: true      # delete resources removed from Git
+      selfHeal: true   # revert manual kubectl changes (drift correction)
+    syncOptions:
+      - CreateNamespace=true

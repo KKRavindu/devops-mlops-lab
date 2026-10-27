@@ -1,0 +1,39 @@
+# Canary: a second Deployment with the same `app` label but `track: canary`.
+# The Service selects on `app` only, so traffic splits by replica ratio
+# (e.g. 3 stable + 1 canary ~= 25% canary). Apply with:
+#   kubectl -n wine-dev apply -f k8s/canary/deployment-canary.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wine-api-canary
+  labels: { app: wine-api, track: canary }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: wine-api, track: canary }
+  template:
+    metadata:
+      labels: { app: wine-api, track: canary }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 10001 }
+      containers:
+        - name: api
+          image: wine-api:v2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 8000 }
+          env:
+            - { name: PREDICTION_LOG, value: /app/logs/predictions.jsonl }
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: 500m, memory: 384Mi }
+          readinessProbe:
+            httpGet: { path: /ready, port: http }
+            periodSeconds: 5
+          lifecycle:
+            preStop:
+              exec: { command: ["sleep", "10"] }
+          volumeMounts:
+            - { name: logs, mountPath: /app/logs }
+      volumes:
+        - { name: logs, emptyDir: {} }

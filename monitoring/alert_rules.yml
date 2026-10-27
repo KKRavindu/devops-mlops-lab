@@ -1,0 +1,49 @@
+groups:
+  # Classic SRE "golden signal" alerts
+  - name: wine-api-service
+    rules:
+      - alert: ApiDown
+        expr: up{job="wine-api"} == 0
+        for: 30s
+        labels: { severity: critical }
+        annotations:
+          summary: "wine-api is not being scraped"
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(api_requests_total{path="/predict",status=~"5.."}[1m]))
+            / sum(rate(api_requests_total{path="/predict"}[1m])) > 0.05
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "More than 5% of /predict calls are failing"
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(api_request_latency_seconds_bucket{path="/predict"}[1m]))) > 0.5
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 /predict latency above 500ms"
+
+  # ML-specific alerts: the service can be "up" while the model is silently wrong
+  - name: wine-api-model
+    rules:
+      - alert: LowPredictionConfidence
+        expr: |
+          sum(rate(model_prediction_confidence_sum[2m]))
+            / sum(rate(model_prediction_confidence_count[2m])) < 0.6
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Mean model confidence < 0.6 - possible data drift"
+
+      - alert: PredictionClassSkew
+        expr: |
+          max(sum by (class_name) (rate(model_predictions_total[5m])))
+            / sum(rate(model_predictions_total[5m])) > 0.8
+        for: 3m
+        labels: { severity: warning }
+        annotations:
+          summary: "One class gets >80% of predictions - check input distribution"

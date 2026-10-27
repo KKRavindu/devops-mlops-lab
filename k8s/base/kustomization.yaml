@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - service.yaml
+  - hpa.yaml
+  - pdb.yaml
+
+# Generated ConfigMaps get a content-hash suffix, so changing a value
+# automatically triggers a rolling restart of the pods that use it.
+configMapGenerator:
+  - name: wine-api-config
+    literals:
+      - LOG_LEVEL=info
+      - PREDICTION_LOG=/app/logs/predictions.jsonl
+      - FAULT_LATENCY_MS=0
+      - FAULT_ERROR_RATE=0
