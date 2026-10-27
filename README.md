@@ -7,6 +7,10 @@ per lab.
 
 The ML is deliberately simple; the engineering around it is what you practise.
 
+📘 **New here? Start with the [Learner Manual (PDF)](docs/DevOps-MLOps-Lab-Manual.pdf)**:
+an introduction to the platform plus a summary of every lab: why it matters, what to do,
+key commands, how you know you're done, and common pitfalls.
+
 ```
                 ┌──────────── Git (single source of truth) ────────────┐
                 │   code · params.yaml · Dockerfile · k8s · terraform    │
