@@ -9,7 +9,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 # Copy requirements alone first so this layer is cached until deps change.
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+# setuptools/wheel come with the base image but aren't needed to serve the model;
+# removing them drops vulnerable vendored packages (found by Trivy in CI).
+RUN pip install -r requirements.txt \
+    && pip uninstall -y setuptools wheel
 
 # --- Stage: train the model inside the build (reproducible, no host state) ---
 FROM base AS trainer
