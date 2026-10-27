@@ -2,27 +2,32 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: wine-prod
 resources:
-  - ../../base
+- ../../base
 labels:
-  - pairs: { env: prod }
-    includeSelectors: false
+- pairs:
+    env: prod
 
 # CI rewrites newTag on every merge to main (GitOps - see lab 13).
 images:
-  - name: wine-api
-    newTag: latest
+- name: wine-api
+  newName: ghcr.io/kkravindu/wine-api
+  newTag: sha-bc93afb
 
 patches:
-  - target: { kind: Deployment, name: wine-api }
-    patch: |-
-      - op: replace
-        path: /spec/replicas
-        value: 3
-  - target: { kind: HorizontalPodAutoscaler, name: wine-api }
-    patch: |-
-      - op: replace
-        path: /spec/minReplicas
-        value: 3
-      - op: replace
-        path: /spec/maxReplicas
-        value: 10
+- patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 3
+  target:
+    kind: Deployment
+    name: wine-api
+- patch: |-
+    - op: replace
+      path: /spec/minReplicas
+      value: 3
+    - op: replace
+      path: /spec/maxReplicas
+      value: 10
+  target:
+    kind: HorizontalPodAutoscaler
+    name: wine-api
